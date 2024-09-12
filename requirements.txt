@@ -1,2 +1,9 @@
 "fastapi[standard]"
 uvicorn
+crewai==0.55.2
+crewai-tools==0.12.0
+langchain-openai
+langchain-tools==0.1.34
+langchain-community
+unstructured==0.15.10
+python-dotenv
