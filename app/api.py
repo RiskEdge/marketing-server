@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
 
 from fastapi import FastAPI, Body, Query
+from typing import Optional, Annotated
 from fastapi.middleware.cors import CORSMiddleware
 
 from crewai import Crew
@@ -152,24 +153,46 @@ def sendAgentInfo(context: ContextModel = Body(...)):
     except Exception as e:
         print(e)
  
-@app.post('/edit-agent-info')   
-def editAgentInfo(agentContent: AgentModel = Body(...),taskContent: TaskModel = Body(...)):
+@app.put('/edit-agent-info')   
+def editAgentInfo(agent: Optional[Annotated[AgentModel, Body()]] = None,task: Optional[Annotated[TaskModel, Body()]] = None):
     try:
-        if agentContent:
-            agent_name = agentContent.role
-            agent_goal = agentContent.goal
-            agent_backstory = agentContent.backstory
-            print(agent_name, agent_goal, agent_backstory)
+        if agent:
+            crew_agents = MarketingAgents()
             
+            manager = crew_agents.marketing_manager()
+            marketing_analyst = crew_agents.marketing_analyst()
+            content_creator = crew_agents.content_creator()
+            SEO_specialist = crew_agents.SEO_specialist()
             
-        if taskContent:
-            task_description = taskContent.description
-            task_agent = taskContent.agentName
+            agents = {
+                manager,
+                marketing_analyst,
+                content_creator,
+                SEO_specialist
+            }
             
-            print(task_description, task_agent)
+            agents[agent.role] = {"role": agent.role, "goal": agent.goal, "backstory": agent.backstory}
+            print('Agent Update: ', agents)
+        if task:
+            crew_tasks = MarketingTasks()
             
+            manager_task = crew_tasks.marketing_management(manager, context=context)
+            marketing_analyst_task = crew_tasks.marketing_analysis(marketing_analyst, context=context)
+            content_creator_task = crew_tasks.content_creation(content_creator, context=context)
+            SEO_specialist_task = crew_tasks.SEO(SEO_specialist, context=context)
             
-        return {"result": "Task info updated"}
+            tasks = {
+                manager_task,
+                marketing_analyst_task,
+                content_creator_task,
+                SEO_specialist_task
+            }
+            
+            tasks[task.agentName] = {"description": task.description, "agentName": task.agentName}
+            print('Task Update: ', tasks)
+            
+        return {"response": "Agent and Task updated successfully"}
+        # return {"agents": agents, "tasks": tasks}
     
     except Exception as e:
         print(e)
