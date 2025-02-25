@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 
-from fastapi import FastAPI, Body, Query
+from fastapi import FastAPI, Body, Query, Form
 from typing import Optional, Annotated
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -10,16 +10,17 @@ from crewai.process import Process
 from mycrew.agents import MarketingAgents
 from mycrew.tasks import MarketingTasks
 
-from models.crewModels import AgentModel, TaskModel, ContextModel, TopicRequest
+from models.crewModels import AgentModel, TaskModel, ContextModel, MarketingModel, ContentModel
 
 app = FastAPI()
 
 load_dotenv()
 
 origins = [
-    "http://localhost:3000",
-    "localhost:3000",
-    "http://localhost:5173"
+    # "http://localhost:3000",
+    # "localhost:3000",
+    "http://localhost:5173",
+    "https://marketing-app.riskedgesolutions.com"
 ]
 
 app.add_middleware(
@@ -31,93 +32,93 @@ app.add_middleware(
 )
 
 
+tasks = MarketingTasks()
 
 @app.get('/')
 async def index() -> dict:
     return {"message" : 'Hello World'}
 
-@app.post('/form-input')
-async def formInput(context: ContextModel = Body(...)):
+@app.post('/marketing-analyst')
+# async def formInput(context: ContextModel = Body(...)):
+async def marketingAnalyst(context: MarketingModel = Form(...)):
     try:
-        agents = MarketingAgents()
-        tasks = MarketingTasks()
         print(context)
-            
+        agents = MarketingAgents(model=context.llm)
         # MANAGER
         manager = agents.marketing_manager()
-
+        
         # MANAGER TASK
-        manager_task = tasks.marketing_management(manager, context)
+        # manager_task = tasks.marketing_management(manager, context)
 
-        if context.agent == "marketing_analyst":
-            marketing_analyst = agents.marketing_analyst()
-            marketing_analyst_task = tasks.marketing_analysis(marketing_analyst, context)
-            
-            marketing_analysis_crew = Crew(
-            agents = [
-                marketing_analyst,
-                
-            ],
-            tasks = [
-                marketing_analyst_task,
-                
-            ],
-            manager_agent=manager,
-            verbose=True,
-            full_output=True,
-            planning=True,
-            output_log_file='outputs/marketingOutput/output3.md'
-            )
-            
-            result = marketing_analysis_crew.kickoff()
-            return {"result": result} 
+        marketing_analyst = agents.marketing_analyst()
+        marketing_analyst_task = tasks.marketing_analysis(marketing_analyst, context)
         
-        elif context.agent == "SEO_specialist":
-            SEO_specialist = agents.SEO_specialist()
-            SEO_specialist_task = tasks.SEO(SEO_specialist, context)
-            
-            seo_crew = Crew(
-            agents = [
-                SEO_specialist,
-            ],
-            tasks = [
-                SEO_specialist_task,
-            ],
-            manager_agent=manager,
-            verbose=True,
-            full_output=True,
-            planning=True,
-            output_log_file='outputs/seo/output3.md'
-            )
+        marketing_analysis_crew = Crew(
+        agents = [marketing_analyst],
+        tasks = [marketing_analyst_task],
+        manager_agent=manager,
+        verbose=True,
+        full_output=True,
+        planning=True,
+        # output_log_file='outputs/marketingOutput/output3.md'
+        )
         
-            result = seo_crew.kickoff()
-            return {"result": result} 
-        
-        elif context.agent == "content_creator":
-            content_creator = agents.content_creator()
-            content_creator_task = tasks.content_creation(content_creator, context)
-            
-            content_creation_crew = Crew(
-            agents = [
-                content_creator,
-            ],
-            tasks = [
-                content_creator_task,
-            ],
-            manager_agent=manager,
-            verbose=True,
-            full_output=True,
-            planning=True,
-            output_log_file='outputs/contentCreation/output3.md'
-            )
-            
-            result = content_creation_crew.kickoff()
-            return {"result": result} 
-        
-        
-        
+        result = marketing_analysis_crew.kickoff()
+        return {"result": result} 
+   
     except Exception as e:
         print(e)
+
+@app.post('/seo-specialist')
+async def seoSpecialist(context: ContextModel = Form(...)):
+    try:
+        print(context)
+        agents = MarketingAgents(model=context.llm)
+        # MANAGER
+        manager = agents.marketing_manager()
+        SEO_specialist = agents.SEO_specialist()
+        SEO_specialist_task = tasks.SEO(SEO_specialist, context)
+        
+        seo_crew = Crew(
+        agents = [SEO_specialist],
+        tasks = [ SEO_specialist_task],
+        manager_agent=manager,
+        verbose=True,
+        full_output=True,
+        planning=True,
+        # output_log_file='outputs/seo/output3.md'
+        )
+        result = seo_crew.kickoff()
+        return {"result": result}
+    except Exception as e:
+        print(e)
+        
+@app.post('/content-writer')
+async def contentWriter(context: ContentModel = Form(...)):
+    try:
+        print(context)
+        agents = MarketingAgents(model=context.llm, temp=context.creativity)
+        # MANAGER
+        manager = agents.marketing_manager()
+        
+        content_creator = agents.content_creator()
+        content_creator_task = tasks.content_creation(content_creator, context)
+        
+        content_creation_crew = Crew(
+        agents = [content_creator],
+        tasks = [content_creator_task],
+        manager_agent=manager,
+        verbose=True,
+        full_output=True,
+        planning=True,
+        # output_log_file='outputs/contentCreation/output3.md'
+        )
+        result = content_creation_crew.kickoff()
+        return {"result": result} 
+    
+    except Exception as e:
+        print(e)
+        
 
 @app.post('/agents-info')
 def sendAgentInfo(context: ContextModel = Body(...)):

@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 
 class AgentModel(BaseModel):
     role: str
@@ -10,15 +10,24 @@ class TaskModel(BaseModel):
     description:str
     agentName:str
     
-class TopicRequest(BaseModel):
-    topic:str
-    
 class ContextModel(BaseModel):
     company_name:str
     company_website:str
     industry:str
-    agent: str
+    # agent: str
     services: Optional[str] = None
-    competitors_context: Optional[str] = None
-    content_type: str
     additional_info: Optional[str] = None
+    llm: str = "ChatGPT"
+    
+class MarketingModel(ContextModel):
+    competitors_context: Optional[str] = None
+    
+class ContentModel(ContextModel):
+    topic:str
+    content_type: str
+    creativity: float = 0.5
+    tags: Optional[str] = None #list[str] 
+    
+# class SeoModel(ContextModel):
+    
+    
