@@ -36,7 +36,7 @@ class SearchTools():
   
   
 
-  def search(query, n_results=5):
+  def search(query, n_results=3):
     url = "https://google.serper.dev/search"
     payload = json.dumps({"q": query})
     headers = {
@@ -44,18 +44,19 @@ class SearchTools():
         'content-type': 'application/json'
     }
     response = requests.request("POST", url, headers=headers, data=payload)
+    print("Response from SERP API: ", response.json())
     results = response.json()['organic']
     stirng = []
     for result in results[:n_results]:
       try:
         stirng.append('\n'.join([
-            f"Title: {result['title']}", f"Link: {result['link']}",
+            f"Title: {result['title']}", 
+            # f"Link: {result['link']}",
             f"Snippet: {result['snippet']}", "\n-----------------"
         ]))
       except KeyError:
         next
 
     content = '\n'.join(stirng)
-    print(type(content))
-    print("Search tools content: \n\n", content)
+    # print("Search tools content: \n\n", content)
     return f"\nSearch result: {content}\n"

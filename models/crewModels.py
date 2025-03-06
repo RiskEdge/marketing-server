@@ -28,6 +28,18 @@ class ContentModel(ContextModel):
     creativity: float = 0.5
     tags: Optional[str] = None #list[str] 
     
-# class SeoModel(ContextModel):
+class InfoModel(BaseModel):
+    company_name:str
+    company_website:str
+    industry:str
+    # agent: str
+    services: Optional[str] = None
+    additional_info: Optional[str] = None
+    llm: str = "ChatGPT"
+    competitors_context: Optional[str] = None
+    topic:str
+    content_type: str
+    creativity: float = 0.5
+    tags: Optional[str] = None
     
     

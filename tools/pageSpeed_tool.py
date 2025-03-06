@@ -3,12 +3,10 @@ import os
 from pydantic import BaseModel, Field
 import requests
 from crewai import Agent, Task
-# from crewai.tools import tool
+
 from langchain.tools import tool
 from unstructured.partition.html import partition_html
 
-# class UrlFormat(BaseModel):
-#     website: str = Field("The url of the website whose insights are to be fetched.")
 
 class PageSpeedTool():
 

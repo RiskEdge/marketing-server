@@ -18,11 +18,11 @@ class MarketingTasks:
             agent=agent,
         )
         
-    def marketing_analysis(
-        self, agent: Agent, context: MarketingModel) -> Task:
+    def marketing_analysis(self, agent: Agent, context) -> Task:
+    # def marketing_analysis(self, agent: Agent, context: MarketingModel) -> Task:
         return Task(
-            description=dedent(f"""Analyze the competitive landscape and market positioning of {context.company_name} within the {context.industry} industry. Conduct a deep dive competitor analysis using {context.competitors_context}, evaluating their branding, marketing strategies, customer engagement, and social media presence (Instagram, LinkedIn, Twitter, etc.). Identify strengths, weaknesses, content trends, and service gaps in {context.services} to uncover opportunities for differentiation. Provide data-driven insights to refine marketing campaigns, sales strategies, and content positioning. Incorporate {context.additional_info} (if any) to enhance the analysis and optimize the marketing roadmap for business growth."""),
-            expected_output=f"A comprehensive competitor analysis report profiling the top 4 competitors, detailing their offerings, target audience, branding strategy, digital marketing performance, and engagement metrics across social platforms. Identify service gaps in {context.services}, highlighting opportunities for {context.company_website} to enhance its value proposition. Deliver key insights on industry trends, competitor rankings, and customer preferences, providing actionable recommendations to optimize marketing campaigns, refine messaging, improve lead generation, and maximize ROI.",
+            description=dedent(f"""Analyze the competitive landscape and market positioning of {context.company_name} within the {context.industry} industry. Conduct a deep dive competitor analysis using with the following context: {context.competitors_context}, evaluating their branding, marketing strategies, customer engagement, and social media presence (Instagram, LinkedIn, Twitter, etc.). Identify strengths, weaknesses, content trends, and service gaps in {context.services} to uncover opportunities for differentiation. Provide data-driven insights to refine marketing campaigns, sales strategies, and content positioning. Incorporate {context.additional_info} (if any) to enhance the analysis and optimize the marketing roadmap for business growth."""),
+            expected_output=f"""A comprehensive competitor analysis report profiling the top 3 competitors, detailing their offerings, target audience, branding strategy, digital marketing performance, and engagement metrics across social platforms. A list of service gaps in {context.services}, highlighting opportunities for {context.company_website} to enhance its value proposition. Deliver key insights on industry trends, competitor rankings, and customer preferences, providing actionable recommendations to optimize marketing campaigns, refine messaging, improve lead generation, and maximize ROI.""",
             agent=agent,
         )
         
@@ -33,7 +33,8 @@ class MarketingTasks:
     #         agent=agent,
     #     )
     
-    def content_creation(self, agent: Agent, context: ContentModel) -> Task:
+    # def content_creation(self, agent: Agent, context: ContentModel) -> Task:
+    def content_creation(self, agent: Agent, context) -> Task:
         return Task(
             description = dedent(f"""
                     Craft a **{context.content_type}** on **{context.topic}** for **{context.company_name}** ({context.company_website}) that aligns with the brand’s vision and engages the target audience in the **{context.industry}** industry.
@@ -62,7 +63,8 @@ class MarketingTasks:
             agent=agent,
         )
         
-    def SEO(self, agent: Agent, context: ContextModel) -> Task:
+    def SEO(self, agent: Agent, context) -> Task:
+    # def SEO(self, agent: Agent, context: ContextModel) -> Task:
         return Task(
             description=dedent(f"""For the technical SEO audit of **{context.company_name}**'s website use Google PageSpeed API to analyze the website insights: **{context.company_website}**. The checklist typically includes the following:\n\nCheck if an XML sitemap is present and if it's updated regularly.\nVerify the presence and correctness of the robots.txt file.\nCheck if the website has implemented rel=canonical tags to avoid duplicate content issues.\nVerify that the website returns appropriate HTTP status codes for all pages.\nCheck if the website has implemented proper redirects (301 redirects for permanent redirects and 302 redirects for temporary redirects) for any moved or deleted pages.\nVerify that the website has a logical and consistent URL structure.\nCheck the size of web pages and images to ensure they load quickly.\nVerify that the website is mobile-friendly and has a responsive design.\nCheck the website's load time and identify any issues that could be causing slow load times.\nVerify that the website has analytics and tracking code implemented correctly.\n\nAdditional information: {context.additional_info}"""),
             expected_output="A detailed report highlighting key SEO issues and providing actionable recommendations to improve rankings, including fixing technical problems, optimizing content and enhancing site security for better search engine performance.",

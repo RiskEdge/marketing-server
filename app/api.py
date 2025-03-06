@@ -10,7 +10,7 @@ from crewai.process import Process
 from mycrew.agents import MarketingAgents
 from mycrew.tasks import MarketingTasks
 
-from models.crewModels import AgentModel, TaskModel, ContextModel, MarketingModel, ContentModel
+from models.crewModels import AgentModel, TaskModel, ContextModel, MarketingModel, ContentModel, InfoModel
 
 app = FastAPI()
 
@@ -45,7 +45,7 @@ async def marketingAnalyst(context: MarketingModel = Form(...)):
         print(context)
         agents = MarketingAgents(model=context.llm)
         # MANAGER
-        manager = agents.marketing_manager()
+        # manager = agents.marketing_manager()
         
         # MANAGER TASK
         # manager_task = tasks.marketing_management(manager, context)
@@ -56,7 +56,7 @@ async def marketingAnalyst(context: MarketingModel = Form(...)):
         marketing_analysis_crew = Crew(
         agents = [marketing_analyst],
         tasks = [marketing_analyst_task],
-        manager_agent=manager,
+        # manager_agent=manager,
         verbose=True,
         full_output=True,
         planning=True,
@@ -75,14 +75,14 @@ async def seoSpecialist(context: ContextModel = Form(...)):
         print(context)
         agents = MarketingAgents(model=context.llm)
         # MANAGER
-        manager = agents.marketing_manager()
+        # manager = agents.marketing_manager()
         SEO_specialist = agents.SEO_specialist()
         SEO_specialist_task = tasks.SEO(SEO_specialist, context)
         
         seo_crew = Crew(
         agents = [SEO_specialist],
         tasks = [ SEO_specialist_task],
-        manager_agent=manager,
+        # manager_agent=manager,
         verbose=True,
         full_output=True,
         planning=True,
@@ -99,7 +99,7 @@ async def contentWriter(context: ContentModel = Form(...)):
         print(context)
         agents = MarketingAgents(model=context.llm, temp=context.creativity)
         # MANAGER
-        manager = agents.marketing_manager()
+        # manager = agents.marketing_manager()
         
         content_creator = agents.content_creator()
         content_creator_task = tasks.content_creation(content_creator, context)
@@ -107,7 +107,7 @@ async def contentWriter(context: ContentModel = Form(...)):
         content_creation_crew = Crew(
         agents = [content_creator],
         tasks = [content_creator_task],
-        manager_agent=manager,
+        # manager_agent=manager,
         verbose=True,
         full_output=True,
         planning=True,
@@ -121,35 +121,43 @@ async def contentWriter(context: ContentModel = Form(...)):
         
 
 @app.post('/agents-info')
-def sendAgentInfo(context: ContextModel = Body(...)):
+# @app.get('/agents-info')
+# def sendAgentInfo():
+def sendAgentInfo(context: InfoModel = Form(...)):
     try:
-        agents = MarketingAgents()
+        marketing_data = {field: getattr(context, field) for field in MarketingModel.model_fields}
+        content_data = {field: getattr(context, field) for field in ContentModel.model_fields}
+        
+        marketing_context = MarketingModel(**marketing_data)
+        content_context = ContentModel(**content_data)
+        
+        agents = MarketingAgents(model="ChatGPT")
         tasks = MarketingTasks()
         
         # AGENTS
-        manager = agents.marketing_manager()
+        # manager = agents.marketing_manager()
         marketing_analyst = agents.marketing_analyst()
         content_creator = agents.content_creator()
         SEO_specialist = agents.SEO_specialist()
         
         # TASKS
-        manager_task = tasks.marketing_management(manager, context=context)
-        marketing_analyst_task = tasks.marketing_analysis(marketing_analyst, context=context)
-        content_creator_task = tasks.content_creation(content_creator, context=context)
-        SEO_specialist_task = tasks.SEO(SEO_specialist, context=context)
+        # manager_task = tasks.marketing_management(manager, context=context)
+        marketing_analyst_task = tasks.marketing_analysis(marketing_analyst, context=marketing_context)
+        content_creator_task = tasks.content_creation(content_creator, context=content_context)
+        SEO_specialist_task = tasks.SEO(SEO_specialist, context=marketing_context)
         return {
-        "agents": {
-            "manager": AgentModel(role=manager.role, goal=manager.goal, backstory=manager.backstory),
-            "marketing_analyst": AgentModel(role=marketing_analyst.role, goal=marketing_analyst.goal, backstory=marketing_analyst.backstory),
-            "content_creator": AgentModel(role=content_creator.role, goal=content_creator.goal, backstory=content_creator.backstory),
-            "SEO_specialist": AgentModel(role=SEO_specialist.role, goal=SEO_specialist.goal, backstory=SEO_specialist.backstory),
-            },
-        "tasks":{
-            "manager_task": TaskModel(description=manager_task.description, agentName=manager_task.agent.role),
-            "marketing_analyst_task": TaskModel(description=marketing_analyst_task.description, agentName=marketing_analyst_task.agent.role),
-            "content_creator_task": TaskModel(description=content_creator_task.description, agentName=content_creator_task.agent.role),
-            "SEO_specialist_task": TaskModel(description=SEO_specialist_task.description, agentName=SEO_specialist_task.agent.role),
-            }
+            "agents": {
+                # "manager": AgentModel(role=manager.role, goal=manager.goal, backstory=manager.backstory),
+                "marketing_analyst": AgentModel(role=marketing_analyst.role, goal=marketing_analyst.goal, backstory=marketing_analyst.backstory),
+                "content_creator": AgentModel(role=content_creator.role, goal=content_creator.goal, backstory=content_creator.backstory),
+                "SEO_specialist": AgentModel(role=SEO_specialist.role, goal=SEO_specialist.goal, backstory=SEO_specialist.backstory),
+                },
+            "tasks":{
+                # "manager_task": TaskModel(description=manager_task.description, agentName=manager_task.agent.role),
+                "marketing_analyst_task": TaskModel(description=marketing_analyst_task.description, agentName=marketing_analyst_task.agent.role),
+                "content_creator_task": TaskModel(description=content_creator_task.description, agentName=content_creator_task.agent.role),
+                "SEO_specialist_task": TaskModel(description=SEO_specialist_task.description, agentName=SEO_specialist_task.agent.role),
+                }
         }
     except Exception as e:
         print(e)
