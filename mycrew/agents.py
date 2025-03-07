@@ -101,7 +101,8 @@ class MarketingAgents:
             Experienced in analyzing competitors SEO strategies and identifying opportunities for improvement.
             An expert in web performance and SEO optimization, leveraging AI to analyze and improve website rankings.""",
             tools=[PageSpeedTool.analyze_website_seo,
-                   SearchTools.search_internet],
+                #    SearchTools.search_internet
+                ],
             allow_delegation=False,
             llm=self.llm,
             verbose=True
