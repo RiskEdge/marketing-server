@@ -1,26 +1,26 @@
 from dotenv import load_dotenv
+import os
 
-from fastapi import FastAPI, Body, Query, Form
-from typing import Optional, Annotated
+from fastapi import FastAPI,  Form
 from fastapi.middleware.cors import CORSMiddleware
 
 from crewai import Crew
-from crewai.process import Process
 
 from mycrew.agents import MarketingAgents
 from mycrew.tasks import MarketingTasks
 
 from models.crewModels import AgentModel, TaskModel, ContextModel, MarketingModel, ContentModel, InfoModel
 
+from supabase import create_client, Client
+
+
 app = FastAPI()
 
 load_dotenv()
 
 origins = [
-    # "http://localhost:3000",
-    # "localhost:3000",
-    "http://localhost:5173",
-    "https://marketing-app.riskedgesolutions.com"
+    "https://marketing-app.riskedgesolutions.com",
+    "http://localhost:5173"
 ]
 
 app.add_middleware(
@@ -34,6 +34,26 @@ app.add_middleware(
 
 tasks = MarketingTasks()
 
+async def getAgentFromDB(agent_name):
+    supabase: Client = create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_KEY'])  
+    return (
+            supabase.table("agents").
+            select("edited_goal, edited_backstory")
+            .eq("agent_name", agent_name)
+            .execute()
+            .data
+            )[0]
+    
+async def getTaskFromDB(task_name):
+    supabase: Client = create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_KEY'])  
+    return (
+            supabase.table("tasks").
+            select("edited_description, edited_expected_output")
+            .eq("task_name", task_name)
+            .execute()
+            .data
+            )[0]
+
 @app.get('/')
 async def index() -> dict:
     return {"message" : 'Hello World'}
@@ -42,166 +62,273 @@ async def index() -> dict:
 # async def formInput(context: ContextModel = Body(...)):
 async def marketingAnalyst(context: MarketingModel = Form(...)):
     try:
-        print(context)
         agents = MarketingAgents(model=context.llm)
-        # MANAGER
-        # manager = agents.marketing_manager()
         
-        # MANAGER TASK
-        # manager_task = tasks.marketing_management(manager, context)
+        agent_info = await getAgentFromDB("Marketing Analyst")
+        task_info = await getTaskFromDB("Marketing Analysis")
 
-        marketing_analyst = agents.marketing_analyst()
-        marketing_analyst_task = tasks.marketing_analysis(marketing_analyst, context)
+        marketing_analyst = agents.marketing_analyst(goal=agent_info["edited_goal"], backstory=agent_info["edited_backstory"])
+        marketing_analyst_task = tasks.marketing_analysis(agent=marketing_analyst, description=task_info["edited_description"], expected_output=task_info["edited_expected_output"], context=context)
         
         marketing_analysis_crew = Crew(
         agents = [marketing_analyst],
         tasks = [marketing_analyst_task],
-        # manager_agent=manager,
         verbose=True,
         full_output=True,
         planning=True,
-        # output_log_file='outputs/marketingOutput/output3.md'
         )
         
         result = marketing_analysis_crew.kickoff()
-        return {"result": result} 
+        return {"result": result,
+                "status": 200} 
    
     except Exception as e:
         print(e)
+        return {"status": 400,
+                "message": f"Couldn't generate response: {e}"}
 
 @app.post('/seo-specialist')
 async def seoSpecialist(context: ContextModel = Form(...)):
     try:
         print(context)
         agents = MarketingAgents(model=context.llm)
-        # MANAGER
-        # manager = agents.marketing_manager()
-        SEO_specialist = agents.SEO_specialist()
-        SEO_specialist_task = tasks.SEO(SEO_specialist, context)
+        
+        
+        agent_info = await getAgentFromDB("SEO Specialist")
+        task_info = await getTaskFromDB("SEO")
+        
+        SEO_specialist = agents.SEO_specialist(goal=agent_info["edited_goal"], backstory=agent_info["edited_backstory"])
+        SEO_specialist_task = tasks.SEO(agent=SEO_specialist, description=task_info["edited_description"], expected_output=task_info["edited_expected_output"], context=context)
         
         seo_crew = Crew(
         agents = [SEO_specialist],
         tasks = [ SEO_specialist_task],
-        # manager_agent=manager,
         verbose=True,
         full_output=True,
         planning=True,
-        # output_log_file='outputs/seo/output3.md'
         )
         result = seo_crew.kickoff()
-        return {"result": result}
+        return {"result": result,
+                "status": 200} 
     except Exception as e:
         print(e)
+        return {"status": 400,
+                "message": f"Couldn't generate response: {e}"}
         
 @app.post('/content-writer')
 async def contentWriter(context: ContentModel = Form(...)):
     try:
         print(context)
         agents = MarketingAgents(model=context.llm, temp=context.creativity)
-        # MANAGER
-        # manager = agents.marketing_manager()
         
-        content_creator = agents.content_creator()
-        content_creator_task = tasks.content_creation(content_creator, context)
+        
+        agent_info = await getAgentFromDB("Content Writer")
+        task_info = await getTaskFromDB("Content Writing")
+        
+        content_creator = agents.content_creator(goal=agent_info["edited_goal"], backstory=agent_info["edited_backstory"])
+        content_creator_task = tasks.content_creation(agent=content_creator, description=task_info["edited_description"], expected_output=task_info["edited_expected_output"], context=context)
         
         content_creation_crew = Crew(
         agents = [content_creator],
         tasks = [content_creator_task],
-        # manager_agent=manager,
         verbose=True,
         full_output=True,
         planning=True,
-        # output_log_file='outputs/contentCreation/output3.md'
         )
         result = content_creation_crew.kickoff()
-        return {"result": result} 
+        return {"result": result,
+                "status": 200} 
     
     except Exception as e:
         print(e)
+        return {"status": 400,
+                "message": f"Couldn't generate response: {e}"}
         
 
 @app.post('/agents-info')
-# @app.get('/agents-info')
-# def sendAgentInfo():
 def sendAgentInfo(context: InfoModel = Form(...)):
     try:
-        marketing_data = {field: getattr(context, field) for field in MarketingModel.model_fields}
-        content_data = {field: getattr(context, field) for field in ContentModel.model_fields}
-        
-        marketing_context = MarketingModel(**marketing_data)
-        content_context = ContentModel(**content_data)
-        
+        # Extract and create context models
+        marketing_context = MarketingModel(**{field: getattr(context, field) for field in MarketingModel.model_fields})
+        content_context = ContentModel(**{field: getattr(context, field) for field in ContentModel.model_fields})
+
+        # Initialize Supabase client
+        supabase: Client = create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_KEY'])
+
+        # Fetch data from Supabase
+        agent_table_response, task_table_response = (
+            supabase.table(table)
+            .select("*")
+            .execute()
+            .data for table in ["agents", "tasks"]
+        )
+
         agents = MarketingAgents(model="ChatGPT")
         tasks = MarketingTasks()
+
+        # Map agent names to creation functions
+        agent_creation_funcs = {
+            "Marketing Analyst": agents.marketing_analyst,
+            "Content Writer": agents.content_creator,
+            "SEO Specialist": agents.SEO_specialist
+        }
+
+        # Create agents
+        agent_objects = {
+            agent_response["agent_name"]: agent_creation_funcs[agent_response["agent_name"]](
+                goal=agent_response["edited_goal"], 
+                backstory=agent_response["edited_backstory"]
+            ) 
+            for agent_response in agent_table_response
+            if agent_response["agent_name"] in agent_creation_funcs
+        }
+
+        # Map task names to task functions and contexts
+        task_creation_funcs = {
+            "Marketing Analysis": (tasks.marketing_analysis, marketing_context),
+            "Content Writing": (tasks.content_creation, content_context),
+            "SEO": (tasks.SEO, marketing_context)
+        }
+
+        # print(task_table_response[0])
+        # Create tasks
+        task_objects = {
+            task_response["task_name"]: task_creation_funcs[task_response["task_name"]][0](
+                agent=agent_objects[task_response["agent_name"]],
+                description=task_response["edited_description"],
+                expected_output=task_response["edited_expected_output"],
+                context=task_creation_funcs[task_response["task_name"]][1]
+            )
+            for task_response in task_table_response
+            if task_response["task_name"] in task_creation_funcs
+        }
         
-        # AGENTS
-        # manager = agents.marketing_manager()
-        marketing_analyst = agents.marketing_analyst()
-        content_creator = agents.content_creator()
-        SEO_specialist = agents.SEO_specialist()
-        
-        # TASKS
-        # manager_task = tasks.marketing_management(manager, context=context)
-        marketing_analyst_task = tasks.marketing_analysis(marketing_analyst, context=marketing_context)
-        content_creator_task = tasks.content_creation(content_creator, context=content_context)
-        SEO_specialist_task = tasks.SEO(SEO_specialist, context=marketing_context)
+
         return {
-            "agents": {
-                # "manager": AgentModel(role=manager.role, goal=manager.goal, backstory=manager.backstory),
-                "marketing_analyst": AgentModel(role=marketing_analyst.role, goal=marketing_analyst.goal, backstory=marketing_analyst.backstory),
-                "content_creator": AgentModel(role=content_creator.role, goal=content_creator.goal, backstory=content_creator.backstory),
-                "SEO_specialist": AgentModel(role=SEO_specialist.role, goal=SEO_specialist.goal, backstory=SEO_specialist.backstory),
-                },
-            "tasks":{
-                # "manager_task": TaskModel(description=manager_task.description, agentName=manager_task.agent.role),
-                "marketing_analyst_task": TaskModel(description=marketing_analyst_task.description, agentName=marketing_analyst_task.agent.role),
-                "content_creator_task": TaskModel(description=content_creator_task.description, agentName=content_creator_task.agent.role),
-                "SEO_specialist_task": TaskModel(description=SEO_specialist_task.description, agentName=SEO_specialist_task.agent.role),
-                }
+            "agents": {name: AgentModel(role=agent.role, goal=agent.goal, backstory=agent.backstory) for name, agent in agent_objects.items()},
+            "tasks": {name + " Task": TaskModel(task_name=name, description=task.description, agentName=task.agent.role) for name, task in task_objects.items()}
         }
     except Exception as e:
         print(e)
  
 @app.put('/edit-agent-info')   
-def editAgentInfo(agent: Optional[Annotated[AgentModel, Body()]] = None,task: Optional[Annotated[TaskModel, Body()]] = None):
+async def editSingleAgentInfo(agent_info: AgentModel = Form(...)):
     try:
-        if agent:
-            crew_agents = MarketingAgents()
-            
-            manager = crew_agents.marketing_manager()
-            marketing_analyst = crew_agents.marketing_analyst()
-            content_creator = crew_agents.content_creator()
-            SEO_specialist = crew_agents.SEO_specialist()
-            
-            agents = {
-                manager,
-                marketing_analyst,
-                content_creator,
-                SEO_specialist
-            }
-            
-            agents[agent.role] = {"role": agent.role, "goal": agent.goal, "backstory": agent.backstory}
-            print('Agent Update: ', agents)
-        if task:
-            crew_tasks = MarketingTasks()
-            
-            manager_task = crew_tasks.marketing_management(manager, context=context)
-            marketing_analyst_task = crew_tasks.marketing_analysis(marketing_analyst, context=context)
-            content_creator_task = crew_tasks.content_creation(content_creator, context=context)
-            SEO_specialist_task = crew_tasks.SEO(SEO_specialist, context=context)
-            
-            tasks = {
-                manager_task,
-                marketing_analyst_task,
-                content_creator_task,
-                SEO_specialist_task
-            }
-            
-            tasks[task.agentName] = {"description": task.description, "agentName": task.agentName}
-            print('Task Update: ', tasks)
-            
-        return {"response": "Agent and Task updated successfully"}
-        # return {"agents": agents, "tasks": tasks}
+        # Initialize Supabase client
+        supabase: Client = create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_KEY'])
+        
+        response = (
+            supabase.table("agents")
+            .update({"edited_goal": agent_info.goal, "edited_backstory": agent_info.backstory})
+            .eq("agent_name", agent_info.role)
+            .execute()
+        )
+        
+        return {
+            "status": 200,
+            "response": response,
+            "message": "Agent info updated successfully"
+        }
     
     except Exception as e:
-        print(e)
+        print("Error while editing agent info:", e)
+        return {
+            "status": 400,
+            "response": response,
+            "message": f"Error while updating agent info: {e}"
+        }
+        
+@app.put('/reset-agent-info')
+async def resetAgentInfo(role: str = Form(...)):
+    try:
+        supabase: Client = create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_KEY'])
+        
+        default_info = (
+            supabase.table("agents")
+            .select("default_goal, default_backstory").
+            eq("agent_name", role)
+            .execute()
+            .data
+        )[0]
+        
+        print("Default info: ", default_info)
+        
+        response = (
+            supabase.table("agents")
+            .update({"edited_goal": default_info["default_goal"], "edited_backstory": default_info["default_backstory"]})
+            .eq("agent_name", role)
+            .execute()
+        )
+        
+        return {
+            "status": 200,
+            "response": response,
+            "message": "Agent info reset successful"
+        }
+    except Exception as e:
+        print("Error while resetting agent info:", e)
+        return {
+            "status": 400,
+            "message": f"Error while resetting agent info: {e}"
+        }   
+        
+@app.put('/edit-task-info')
+async def editSingleTaskInfo(task_info: TaskModel = Form(...)):
+    try:
+        print(task_info)
+        # Initialize Supabase client
+        supabase: Client = create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_KEY'])
+        
+        response = (
+            supabase.table("tasks")
+            .update({"edited_description": task_info.description})
+            .eq("task_name", task_info.task_name)
+            .execute()
+        )
+        
+        return {
+            "status": 200,
+            "response": response,
+            "message": "Task info updated successfully"
+        }
+    except Exception as e:
+        print("Error while editing task info:", e)
+        return {
+            "status": 400,
+            "response": response,
+            "message": f"Error while editing task info: {e}"
+        }
+        
+@app.put('/reset-task-info')
+async def resetTaskInfo(task_name: str = Form(...)):
+    try:
+        supabase: Client = create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_KEY'])
+        
+        default_info = (
+            supabase.table("tasks")
+            .select("default_description").
+            eq("task_name", task_name)
+            .execute()
+            .data
+        )[0]
+        
+        print("Default info: ", default_info)
+        
+        response = (
+            supabase.table("tasks")
+            .update({"edited_description": default_info["default_description"],})
+            .eq("task_name", task_name)
+            .execute()
+        )
+        
+        return {
+            "status": 200,
+            "response": response,
+            "message": "Agent info reset successful"
+        }
+    except Exception as e:
+        print("Error while resetting task info:", e)
+        return {
+            "status": 400,
+            "message": f"Error while resetting task info: {e}"
+        }

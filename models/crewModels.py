@@ -7,6 +7,7 @@ class AgentModel(BaseModel):
     backstory: Optional[str] = None
     
 class TaskModel(BaseModel):
+    task_name: str
     description:str
     agentName:str
     

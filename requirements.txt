@@ -9,3 +9,4 @@ langchain-community==0.3.17
 unstructured==0.15.10
 python-dotenv==1.0.1
 python-multipart==0.0.20
+supabase==2.13.0
