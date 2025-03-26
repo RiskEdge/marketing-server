@@ -145,12 +145,14 @@ async def contentWriter(context: ContentModel = Form(...)):
                 "message": f"Couldn't generate response: {e}"}
         
 
-@app.post('/agents-info')
-def sendAgentInfo(context: InfoModel = Form(...)):
+# @app.post('/agents-info')
+@app.get('/agents-info')
+def sendAgentInfo():
+# def sendAgentInfo(context: InfoModel = Form(...)):
     try:
         # Extract and create context models
-        marketing_context = MarketingModel(**{field: getattr(context, field) for field in MarketingModel.model_fields})
-        content_context = ContentModel(**{field: getattr(context, field) for field in ContentModel.model_fields})
+        # marketing_context = MarketingModel(**{field: getattr(context, field) for field in MarketingModel.model_fields})
+        # content_context = ContentModel(**{field: getattr(context, field) for field in ContentModel.model_fields})
 
         # Initialize Supabase client
         supabase: Client = create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_KEY'])
@@ -163,50 +165,65 @@ def sendAgentInfo(context: InfoModel = Form(...)):
             .data for table in ["agents", "tasks"]
         )
 
-        agents = MarketingAgents(model="ChatGPT")
-        tasks = MarketingTasks()
+        # agents = MarketingAgents(model="ChatGPT")
+        # tasks = MarketingTasks()
 
         # Map agent names to creation functions
-        agent_creation_funcs = {
-            "Marketing Analyst": agents.marketing_analyst,
-            "Content Writer": agents.content_creator,
-            "SEO Specialist": agents.SEO_specialist
-        }
+        # agent_creation_funcs = {
+        #     "Marketing Analyst": agents.marketing_analyst,
+        #     "Content Writer": agents.content_creator,
+        #     "SEO Specialist": agents.SEO_specialist
+        # }
 
         # Create agents
+        # agent_objects = {
+        #     agent_response["agent_name"]: agent_creation_funcs[agent_response["agent_name"]](
+        #         goal=agent_response["edited_goal"], 
+        #         backstory=agent_response["edited_backstory"]
+        #     ) 
+        #     for agent_response in agent_table_response
+        #     if agent_response["agent_name"] in agent_creation_funcs
+        # }
         agent_objects = {
-            agent_response["agent_name"]: agent_creation_funcs[agent_response["agent_name"]](
-                goal=agent_response["edited_goal"], 
-                backstory=agent_response["edited_backstory"]
-            ) 
+            agent_response["agent_name"]: {
+                "role": agent_response["agent_name"],
+                "goal": agent_response["edited_goal"], 
+                "backstory": agent_response["edited_backstory"]
+            }
             for agent_response in agent_table_response
-            if agent_response["agent_name"] in agent_creation_funcs
+            # if agent_response["agent_name"] in agent_creation_funcs
         }
 
         # Map task names to task functions and contexts
-        task_creation_funcs = {
-            "Marketing Analysis": (tasks.marketing_analysis, marketing_context),
-            "Content Writing": (tasks.content_creation, content_context),
-            "SEO": (tasks.SEO, marketing_context)
-        }
+        # task_creation_funcs = {
+        #     "Marketing Analysis": (tasks.marketing_analysis, marketing_context),
+        #     "Content Writing": (tasks.content_creation, content_context),
+        #     "SEO": (tasks.SEO, marketing_context)
+        # }
 
         # print(task_table_response[0])
         # Create tasks
         task_objects = {
-            task_response["task_name"]: task_creation_funcs[task_response["task_name"]][0](
-                agent=agent_objects[task_response["agent_name"]],
-                description=task_response["edited_description"],
-                expected_output=task_response["edited_expected_output"],
-                context=task_creation_funcs[task_response["task_name"]][1]
-            )
+            task_response["task_name"]: {
+                "agent": task_response["agent_name"],
+                "task_name": task_response["task_name"],
+                "description": task_response["edited_description"],
+                "expected_output": task_response["edited_expected_output"],
+                # context=task_creation_funcs[task_response["task_name"]][1]
+            }
             for task_response in task_table_response
-            if task_response["task_name"] in task_creation_funcs
+            # if task_response["task_name"] in task_creation_funcs
         }
+        
+        # print({
+        #     "agents": {name: AgentModel(role=name, goal=agent["goal"], backstory=agent["backstory"]) for name, agent in agent_objects.items()},
+        #     "tasks": {name + " Task": TaskModel(task_name=name, description=task["description"], agentName=task["agent"]) for name, task in task_objects.items()}
+        # })
         
 
         return {
-            "agents": {name: AgentModel(role=agent.role, goal=agent.goal, backstory=agent.backstory) for name, agent in agent_objects.items()},
-            "tasks": {name + " Task": TaskModel(task_name=name, description=task.description, agentName=task.agent.role) for name, task in task_objects.items()}
+            "agents": {name: AgentModel(role=name, goal=agent["goal"], backstory=agent["backstory"]) for name, agent in agent_objects.items()},
+            "tasks": {name + " Task": TaskModel(task_name=name, description=task["description"], agentName=task["agent"]) for name, task in task_objects.items()}
         }
     except Exception as e:
         print(e)
@@ -324,7 +341,7 @@ async def resetTaskInfo(task_name: str = Form(...)):
         return {
             "status": 200,
             "response": response,
-            "message": "Agent info reset successful"
+            "message": "Task info reset successful"
         }
     except Exception as e:
         print("Error while resetting task info:", e)

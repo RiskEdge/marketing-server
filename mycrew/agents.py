@@ -21,7 +21,7 @@ def get_llm(model: str, temp: float = 0):
         
         elif model.lower() == "gemini":
             # return ChatGoogleGenerativeAI(model='gemini-1.5-flash', temperature=temp, google_api_key=os.environ["GOOGLE_API_KEY"])
-            return LLM(api_key=os.environ["GOOGLE_API_KEY"], model="gemini/gemini-1.5-flash", temperature=temp)
+            return LLM(api_key=os.environ["GOOGLE_API_KEY"], model="gemini/gemini-2.0-flash", temperature=temp)
         
         else:
             raise ValueError(f"Unsupported LLM provider: {model}")
