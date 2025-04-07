@@ -75,7 +75,7 @@ async def marketingAnalyst(context: MarketingModel = Form(...)):
         tasks = [marketing_analyst_task],
         verbose=True,
         full_output=True,
-        planning=True,
+        # planning=True,
         )
         
         result = marketing_analysis_crew.kickoff()
@@ -150,10 +150,7 @@ async def contentWriter(context: ContentModel = Form(...)):
 def sendAgentInfo():
 # def sendAgentInfo(context: InfoModel = Form(...)):
     try:
-        # Extract and create context models
-        # marketing_context = MarketingModel(**{field: getattr(context, field) for field in MarketingModel.model_fields})
-        # content_context = ContentModel(**{field: getattr(context, field) for field in ContentModel.model_fields})
-
+        
         # Initialize Supabase client
         supabase: Client = create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_KEY'])
 
@@ -168,22 +165,7 @@ def sendAgentInfo():
         # agents = MarketingAgents(model="ChatGPT")
         # tasks = MarketingTasks()
 
-        # Map agent names to creation functions
-        # agent_creation_funcs = {
-        #     "Marketing Analyst": agents.marketing_analyst,
-        #     "Content Writer": agents.content_creator,
-        #     "SEO Specialist": agents.SEO_specialist
-        # }
-
-        # Create agents
-        # agent_objects = {
-        #     agent_response["agent_name"]: agent_creation_funcs[agent_response["agent_name"]](
-        #         goal=agent_response["edited_goal"], 
-        #         backstory=agent_response["edited_backstory"]
-        #     ) 
-        #     for agent_response in agent_table_response
-        #     if agent_response["agent_name"] in agent_creation_funcs
-        # }
+        
         agent_objects = {
             agent_response["agent_name"]: {
                 "role": agent_response["agent_name"],
@@ -194,14 +176,7 @@ def sendAgentInfo():
             # if agent_response["agent_name"] in agent_creation_funcs
         }
 
-        # Map task names to task functions and contexts
-        # task_creation_funcs = {
-        #     "Marketing Analysis": (tasks.marketing_analysis, marketing_context),
-        #     "Content Writing": (tasks.content_creation, content_context),
-        #     "SEO": (tasks.SEO, marketing_context)
-        # }
-
-        # print(task_table_response[0])
+        
         # Create tasks
         task_objects = {
             task_response["task_name"]: {

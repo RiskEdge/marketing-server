@@ -62,7 +62,7 @@ class MarketingAgents:
                 SearchTools.search_linkedin,   
                 SearchTools.search_twitter, 
                 # SearchTools, 
-                PageSpeedTool.analyze_website_seo  
+                # PageSpeedTool.analyze_website_seo  
             ],
             allow_delegation=False,
             llm=self.llm,
