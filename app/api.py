@@ -1,5 +1,7 @@
 from dotenv import load_dotenv
 import os
+import logging
+from logging.handlers import TimedRotatingFileHandler
 
 from fastapi import FastAPI,  Form
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,6 +20,30 @@ app = FastAPI()
 
 load_dotenv()
 
+
+# LOGGER-----------------------------------------------------
+# Create logs directory
+os.makedirs("logs", exist_ok=True)
+
+# Setup monthly rotating logs
+log_handler = TimedRotatingFileHandler(
+    filename="logs/app.log",
+    when="midnight",
+    interval=30,
+    backupCount=6,
+    encoding='utf-8',
+    utc=True
+)
+log_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+log_handler.setFormatter(log_formatter)
+
+logger = logging.getLogger("fastapi_logger")
+logger.setLevel(logging.DEBUG)
+logger.addHandler(log_handler)
+logger.propagate = False
+
+#-------------------------------------------------------------
+
 origins = [
     "https://marketing-app.riskedgesolutions.com",
     "http://localhost:5173"
@@ -35,33 +61,51 @@ app.add_middleware(
 tasks = MarketingTasks()
 
 async def getAgentFromDB(agent_name):
+    logger.info(f"Fetching agent '{agent_name}' from Supabase.")
     supabase: Client = create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_KEY'])  
-    return (
-            supabase.table("agents").
-            select("edited_goal, edited_backstory")
+    try:
+        data = (
+            supabase.table("agents")
+            .select("edited_goal, edited_backstory")
             .eq("agent_name", agent_name)
             .execute()
-            .data
-            )[0]
+            .data[0]
+        )
+        logger.debug(f"Agent data: {data}")
+        return data
+    except Exception as e:
+        logger.error(f"Error fetching agent from DB: {e}")
+        print(f"Error fetching agent from DB: {e}")
+        raise
     
 async def getTaskFromDB(task_name):
+    logger.info(f"Fetching task '{task_name}' from Supabase.")
     supabase: Client = create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_KEY'])  
-    return (
-            supabase.table("tasks").
-            select("edited_description, edited_expected_output")
+    try:
+        data = (
+            supabase.table("tasks")
+            .select("edited_description, edited_expected_output")
             .eq("task_name", task_name)
             .execute()
-            .data
-            )[0]
+            .data[0]
+        )
+        logger.debug(f"Task data: {data}")
+        return data
+    except Exception as e:
+        logger.error(f"Error fetching task from DB: {e}")
+        print(f"Error fetching task from DB: {e}")
+        raise
 
 @app.get('/')
 async def index() -> dict:
+    logger.info("Index route accessed.")
     return {"message" : 'Hello World'}
 
 @app.post('/marketing-analyst')
 # async def formInput(context: ContextModel = Body(...)):
 async def marketingAnalyst(context: MarketingModel = Form(...)):
     try:
+        logger.info("Received request at /marketing-analyst endpoint.")
         agents = MarketingAgents(model=context.llm)
         
         agent_info = await getAgentFromDB("Marketing Analyst")
@@ -79,18 +123,24 @@ async def marketingAnalyst(context: MarketingModel = Form(...)):
         )
         
         result = marketing_analysis_crew.kickoff()
+        logger.info("Crew task executed successfully.")
+        logger.debug(f"Crew result: {result}")
+        
+        
         return {"result": result,
                 "status": 200} 
    
     except Exception as e:
         print(e)
+        logger.exception("Error in /marketing-analyst endpoint:")
         return {"status": 400,
                 "message": f"Couldn't generate response: {e}"}
 
 @app.post('/seo-specialist')
 async def seoSpecialist(context: ContextModel = Form(...)):
     try:
-        print(context)
+        # print(context)
+        logger.info("Received request at /seo-specialist endpoint.")
         agents = MarketingAgents(model=context.llm)
         
         
@@ -105,20 +155,26 @@ async def seoSpecialist(context: ContextModel = Form(...)):
         tasks = [ SEO_specialist_task],
         verbose=True,
         full_output=True,
-        planning=True,
+        # planning=True,
         )
         result = seo_crew.kickoff()
+        logger.info("Crew task executed successfully.")
+        logger.debug(f"Crew result: {result}")
+        
+        # print("RESULT: ", result)
         return {"result": result,
                 "status": 200} 
     except Exception as e:
         print(e)
+        logger.exception("Error in /seo-specialist endpoint:")
         return {"status": 400,
                 "message": f"Couldn't generate response: {e}"}
         
 @app.post('/content-writer')
 async def contentWriter(context: ContentModel = Form(...)):
     try:
-        print(context)
+        # print(context)
+        logger.info("Received request at /content-writer endpoint.")
         agents = MarketingAgents(model=context.llm, temp=context.creativity)
         
         
@@ -136,11 +192,15 @@ async def contentWriter(context: ContentModel = Form(...)):
         planning=True,
         )
         result = content_creation_crew.kickoff()
+        logger.info("Crew task executed successfully.")
+        logger.debug(f"Crew result: {result}")
+        
         return {"result": result,
                 "status": 200} 
     
     except Exception as e:
         print(e)
+        logger.exception("Error in /content-writer endpoint:")
         return {"status": 400,
                 "message": f"Couldn't generate response: {e}"}
         
@@ -148,9 +208,8 @@ async def contentWriter(context: ContentModel = Form(...)):
 # @app.post('/agents-info')
 @app.get('/agents-info')
 def sendAgentInfo():
-# def sendAgentInfo(context: InfoModel = Form(...)):
     try:
-        
+        logger.info("Fetching all agent and task data from Supabase.")
         # Initialize Supabase client
         supabase: Client = create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_KEY'])
 
@@ -161,11 +220,10 @@ def sendAgentInfo():
             .execute()
             .data for table in ["agents", "tasks"]
         )
-
-        # agents = MarketingAgents(model="ChatGPT")
-        # tasks = MarketingTasks()
-
         
+        logger.debug(f"Fetched agent data: {agent_table_response}")
+        logger.debug(f"Fetched task data: {task_table_response}")
+
         agent_objects = {
             agent_response["agent_name"]: {
                 "role": agent_response["agent_name"],
@@ -173,7 +231,6 @@ def sendAgentInfo():
                 "backstory": agent_response["edited_backstory"]
             }
             for agent_response in agent_table_response
-            # if agent_response["agent_name"] in agent_creation_funcs
         }
 
         
@@ -183,29 +240,26 @@ def sendAgentInfo():
                 "agent": task_response["agent_name"],
                 "task_name": task_response["task_name"],
                 "description": task_response["edited_description"],
-                "expected_output": task_response["edited_expected_output"],
-                # context=task_creation_funcs[task_response["task_name"]][1]
+                "expected_output": task_response["edited_expected_output"]
             }
             for task_response in task_table_response
-            # if task_response["task_name"] in task_creation_funcs
         }
         
-        # print({
-        #     "agents": {name: AgentModel(role=name, goal=agent["goal"], backstory=agent["backstory"]) for name, agent in agent_objects.items()},
-        #     "tasks": {name + " Task": TaskModel(task_name=name, description=task["description"], agentName=task["agent"]) for name, task in task_objects.items()}
-        # })
+        logger.info("Returning structured agent and task objects.")
         
-
         return {
             "agents": {name: AgentModel(role=name, goal=agent["goal"], backstory=agent["backstory"]) for name, agent in agent_objects.items()},
             "tasks": {name + " Task": TaskModel(task_name=name, description=task["description"], agentName=task["agent"]) for name, task in task_objects.items()}
         }
     except Exception as e:
         print(e)
+        logger.exception("Error while sending agent and task info:")
+        return {"status": 400, "message": f"Error while fetching agent/task info: {e}"}
  
 @app.put('/edit-agent-info')   
 async def editSingleAgentInfo(agent_info: AgentModel = Form(...)):
     try:
+        logger.info(f"Editing info for agent: {agent_info.role}")
         # Initialize Supabase client
         supabase: Client = create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_KEY'])
         
@@ -216,6 +270,8 @@ async def editSingleAgentInfo(agent_info: AgentModel = Form(...)):
             .execute()
         )
         
+        logger.debug(f"Update response: {response}")
+        
         return {
             "status": 200,
             "response": response,
@@ -224,6 +280,7 @@ async def editSingleAgentInfo(agent_info: AgentModel = Form(...)):
     
     except Exception as e:
         print("Error while editing agent info:", e)
+        logger.exception("Error while editing agent info:")
         return {
             "status": 400,
             "response": response,
@@ -233,6 +290,8 @@ async def editSingleAgentInfo(agent_info: AgentModel = Form(...)):
 @app.put('/reset-agent-info')
 async def resetAgentInfo(role: str = Form(...)):
     try:
+        logger.info(f"Resetting info for agent: {role}")
+        
         supabase: Client = create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_KEY'])
         
         default_info = (
@@ -243,7 +302,8 @@ async def resetAgentInfo(role: str = Form(...)):
             .data
         )[0]
         
-        print("Default info: ", default_info)
+        # print("Default info: ", default_info)
+        logger.debug(f"Default agent info: {default_info}")
         
         response = (
             supabase.table("agents")
@@ -259,6 +319,7 @@ async def resetAgentInfo(role: str = Form(...)):
         }
     except Exception as e:
         print("Error while resetting agent info:", e)
+        logger.exception(f"Error while resetting agent info:", e)
         return {
             "status": 400,
             "message": f"Error while resetting agent info: {e}"
@@ -267,7 +328,8 @@ async def resetAgentInfo(role: str = Form(...)):
 @app.put('/edit-task-info')
 async def editSingleTaskInfo(task_info: TaskModel = Form(...)):
     try:
-        print(task_info)
+        # print(task_info)
+        logger.info(f"Editing task info: {task_info.task_name}")
         # Initialize Supabase client
         supabase: Client = create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_KEY'])
         
@@ -278,6 +340,8 @@ async def editSingleTaskInfo(task_info: TaskModel = Form(...)):
             .execute()
         )
         
+        logger.debug(f"Update response: {response}")
+        
         return {
             "status": 200,
             "response": response,
@@ -285,6 +349,7 @@ async def editSingleTaskInfo(task_info: TaskModel = Form(...)):
         }
     except Exception as e:
         print("Error while editing task info:", e)
+        logger.exception("Error while editing task info:", e)
         return {
             "status": 400,
             "response": response,
@@ -294,6 +359,7 @@ async def editSingleTaskInfo(task_info: TaskModel = Form(...)):
 @app.put('/reset-task-info')
 async def resetTaskInfo(task_name: str = Form(...)):
     try:
+        logger.info(f"Resetting task info for task: {task_name}")
         supabase: Client = create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_KEY'])
         
         default_info = (
@@ -304,7 +370,8 @@ async def resetTaskInfo(task_name: str = Form(...)):
             .data
         )[0]
         
-        print("Default info: ", default_info)
+        # print("Default info: ", default_info)
+        logger.debug(f"Default task info: {default_info}")
         
         response = (
             supabase.table("tasks")
@@ -320,6 +387,7 @@ async def resetTaskInfo(task_name: str = Form(...)):
         }
     except Exception as e:
         print("Error while resetting task info:", e)
+        logger.exception("Error while resetting task info:", e)
         return {
             "status": 400,
             "message": f"Error while resetting task info: {e}"

@@ -44,7 +44,7 @@ class SearchTools():
         'content-type': 'application/json'
     }
     response = requests.request("POST", url, headers=headers, data=payload)
-    print("Response from SERP API: ", response.json())
+    # print("Response from SERP API: ", response.json())
     results = response.json()['organic']
     stirng = []
     for result in results[:n_results]:
