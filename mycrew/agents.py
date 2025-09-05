@@ -45,15 +45,16 @@ class MarketingAgents:
             verbose=True
         )
         
-    def marketing_analyst(self, goal:str, backstory:str):
+    def marketing_analyst(self):
+    # def marketing_analyst(self, goal:str, backstory:str):
         return Agent(
             role="Marketing Analyst",
-            goal=dedent(f"""{goal}"""),
-            backstory=dedent(f"""{backstory}"""),
+            # goal=dedent(f"""{goal}"""),
+            # backstory=dedent(f"""{backstory}"""),
             
-            # goal=dedent("""Analyze market trends, competitor strategies, and digital presence to develop high-performing marketing strategies for the client. Conduct a thorough competitor and market analysis, evaluating key players' positioning, content strategies, and engagement metrics across platforms like Instagram, LinkedIn, and Twitter. Identify opportunities to optimize branding, improve customer engagement, and maximize ROI. Provide actionable insights that align with the client’s business goals, ensuring a data-driven, competitive edge."""),
+            goal=dedent("""Analyze market trends, competitor strategies, and digital presence to develop high-performing marketing strategies for the client. Conduct a thorough competitor and market analysis, evaluating key players' positioning, content strategies, and engagement metrics across platforms like Instagram, LinkedIn, and Twitter. Identify opportunities to optimize branding, improve customer engagement, and maximize ROI. Provide actionable insights that align with the client’s business goals, ensuring a data-driven, competitive edge."""),
             
-            # backstory=dedent("""You are an expert Marketing Analyst with deep expertise in market research, digital strategy, and competitor intelligence. You have a strong grasp of industry trends, customer behavior, and emerging digital marketing techniques. Your skill set includes social media analytics, SEO, SEM, email marketing, and performance tracking. You specialize in analyzing competitors' branding, content, and engagement tactics across Instagram, LinkedIn, Twitter, and other digital platforms. By leveraging data insights, you craft strategies that enhance brand positioning, optimize ad spend, and drive targeted engagement. Your role is to translate raw data into actionable marketing plans that help clients outperform competitors and grow their digital footprint."""),
+            backstory=dedent("""You are an expert Marketing Analyst with deep expertise in market research, digital strategy, and competitor intelligence. You have a strong grasp of industry trends, customer behavior, and emerging digital marketing techniques. Your skill set includes social media analytics, SEO, SEM, email marketing, and performance tracking. You specialize in analyzing competitors' branding, content, and engagement tactics across Instagram, LinkedIn, Twitter, and other digital platforms. By leveraging data insights, you craft strategies that enhance brand positioning, optimize ad spend, and drive targeted engagement. Your role is to translate raw data into actionable marketing plans that help clients outperform competitors and grow their digital footprint."""),
             
             tools=[
                 # BrowserTools.scrape_and_summarize_website,
@@ -69,14 +70,14 @@ class MarketingAgents:
             verbose=True
         )
     
-    def content_creator(self, goal:str, backstory:str):
+    def content_creator(self):
         return Agent(
             role="Content Writer",
-            goal=dedent(f"""{goal}"""),
-            backstory=dedent(f"""{backstory}"""),
-            # goal=dedent("""Produce high-quality, engaging and strategic content that drives audience engagement, improves search engine rankings and generate high-quality leads. Support business objectives and deliver measurable results by optimizing content across various channels to increase visibility and reach broader audience. Ensure all content aligns with the brand’s voice, values and visual identity."""),
+            # goal=dedent(f"""{goal}"""),
+            # backstory=dedent(f"""{backstory}"""),
+            goal=dedent("""Produce high-quality, engaging and strategic content that drives audience engagement, improves search engine rankings and generate high-quality leads. Support business objectives and deliver measurable results by optimizing content across various channels to increase visibility and reach broader audience. Ensure all content aligns with the brand’s voice, values and visual identity."""),
             
-            # backstory=dedent("""You are a professional in developing conversion driven content. Expert in SEO including keyword research, on-page optimization and content structure to enhance visibility and rankings on search engines. Expertise in creating and managing content for various social media platforms, including knowledge of platform-specific best practices and tools. You have strong analytical skills utilizing tools such as Google Analytics and social media insights to evaluate content performance, measure effectiveness, and make data-driven decisions."""),
+            backstory=dedent("""You are a professional in developing conversion driven content. Expert in SEO including keyword research, on-page optimization and content structure to enhance visibility and rankings on search engines. Expertise in creating and managing content for various social media platforms, including knowledge of platform-specific best practices and tools. You have strong analytical skills utilizing tools such as Google Analytics and social media insights to evaluate content performance, measure effectiveness, and make data-driven decisions."""),
             tools=[
                 # BrowserTools.scrape_and_summarize_website,
                 SearchTools.search_internet,   
@@ -85,32 +86,17 @@ class MarketingAgents:
             llm=self.llm,
             verbose=True
         )
-        
-    # def SEO_specialist(self):
-    #     return Agent(
-    #         role="SEO Specialist", 
-    #         goal=dedent("""Conduct client's website audit to identify and rectify technical, on-page and off-page SEO issues that may be hindering the website's organic search performance. Drive organic traffic and improve search engine rankings."""),
-            
-    #         backstory=dedent("""You are proficient in conducting technical SEO audit, reviewing the site's crawlability and indexability by search engines. Assess the site's architecture, ensuring a well-organized URL structure and internal linking. Site performance, including loading speed and mobile responsiveness, is also examined, along with checking for the correct implementation of structured data like schema markup. Experienced in analyzing competitors SEO strategies and identifying opportunities for improvement."""),
-    #         tools=[
-    #             # BrowserTools.scrape_and_summarize_website,
-    #             SearchTools.search_internet,   
-    #         ],
-    #         allow_delegation=False,
-    #         llm=self.llm,
-    #         verbose=True
-    #         )
     
-    def SEO_specialist(self, goal:str, backstory:str):
+    def SEO_specialist(self):
         agent =  Agent(
             role="SEO Specialist",
-            goal=dedent(f"""{goal}"""),
-            backstory=dedent(f"""{backstory}"""),
-            # goal="""Analyze a website’s performance using Google PageSpeed API and provide SEO recommendations.\nConduct client's website audit to identify and rectify technical, on-page and off-page SEO issues that may be hindering the website's organic search performance. Drive organic traffic and improve search engine rankings.""",
-            # backstory="""You are proficient in conducting technical SEO audit, reviewing the site's crawlability and indexability by search engines. 
-            # Assess the site's architecture, ensuring a well-organized URL structure and internal linking, site performance, including loading speed and mobile responsiveness, is also examined, along with checking for the correct implementation of structured data like schema markup. 
-            # Experienced in analyzing competitors SEO strategies and identifying opportunities for improvement.
-            # An expert in web performance and SEO optimization, leveraging AI to analyze and improve website rankings.""",
+            # goal=dedent(f"""{goal}"""),
+            # backstory=dedent(f"""{backstory}"""),
+            goal="""Analyze a website’s performance using Google PageSpeed API and provide SEO recommendations.\nConduct client's website audit to identify and rectify technical, on-page and off-page SEO issues that may be hindering the website's organic search performance. Drive organic traffic and improve search engine rankings.""",
+            backstory="""You are proficient in conducting technical SEO audit, reviewing the site's crawlability and indexability by search engines. 
+            Assess the site's architecture, ensuring a well-organized URL structure and internal linking, site performance, including loading speed and mobile responsiveness, is also examined, along with checking for the correct implementation of structured data like schema markup. 
+            Experienced in analyzing competitors SEO strategies and identifying opportunities for improvement.
+            An expert in web performance and SEO optimization, leveraging AI to analyze and improve website rankings.""",
             tools=[PageSpeedTool.analyze_website_seo,
                 #    SearchTools.search_internet
                 ],

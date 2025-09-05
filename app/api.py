@@ -108,11 +108,13 @@ async def marketingAnalyst(context: MarketingModel = Form(...)):
         logger.info("Received request at /marketing-analyst endpoint.")
         agents = MarketingAgents(model=context.llm)
         
-        agent_info = await getAgentFromDB("Marketing Analyst")
-        task_info = await getTaskFromDB("Marketing Analysis")
+        # agent_info = await getAgentFromDB("Marketing Analyst")
+        # task_info = await getTaskFromDB("Marketing Analysis")
 
-        marketing_analyst = agents.marketing_analyst(goal=agent_info["edited_goal"], backstory=agent_info["edited_backstory"])
-        marketing_analyst_task = tasks.marketing_analysis(agent=marketing_analyst, description=task_info["edited_description"], expected_output=task_info["edited_expected_output"], context=context)
+        # marketing_analyst = agents.marketing_analyst(goal=agent_info["edited_goal"], backstory=agent_info["edited_backstory"])
+        # marketing_analyst_task = tasks.marketing_analysis(agent=marketing_analyst, description=task_info["edited_description"], expected_output=task_info["edited_expected_output"], context=context)
+        marketing_analyst = agents.marketing_analyst()
+        marketing_analyst_task = tasks.marketing_analysis(marketing_analyst, context)
         
         marketing_analysis_crew = Crew(
         agents = [marketing_analyst],
@@ -144,11 +146,14 @@ async def seoSpecialist(context: ContextModel = Form(...)):
         agents = MarketingAgents(model=context.llm)
         
         
-        agent_info = await getAgentFromDB("SEO Specialist")
-        task_info = await getTaskFromDB("SEO")
+        # agent_info = await getAgentFromDB("SEO Specialist")
+        # task_info = await getTaskFromDB("SEO")
         
-        SEO_specialist = agents.SEO_specialist(goal=agent_info["edited_goal"], backstory=agent_info["edited_backstory"])
-        SEO_specialist_task = tasks.SEO(agent=SEO_specialist, description=task_info["edited_description"], expected_output=task_info["edited_expected_output"], context=context)
+        # SEO_specialist = agents.SEO_specialist(goal=agent_info["edited_goal"], backstory=agent_info["edited_backstory"])
+        # SEO_specialist_task = tasks.SEO(agent=SEO_specialist, description=task_info["edited_description"], expected_output=task_info["edited_expected_output"], context=context)
+        
+        SEO_specialist = agents.SEO_specialist()
+        SEO_specialist_task = tasks.SEO(SEO_specialist, context)
         
         seo_crew = Crew(
         agents = [SEO_specialist],
@@ -178,11 +183,14 @@ async def contentWriter(context: ContentModel = Form(...)):
         agents = MarketingAgents(model=context.llm, temp=context.creativity)
         
         
-        agent_info = await getAgentFromDB("Content Writer")
-        task_info = await getTaskFromDB("Content Writing")
+        # agent_info = await getAgentFromDB("Content Writer")
+        # task_info = await getTaskFromDB("Content Writing")
         
-        content_creator = agents.content_creator(goal=agent_info["edited_goal"], backstory=agent_info["edited_backstory"])
-        content_creator_task = tasks.content_creation(agent=content_creator, description=task_info["edited_description"], expected_output=task_info["edited_expected_output"], context=context)
+        # content_creator = agents.content_creator(goal=agent_info["edited_goal"], backstory=agent_info["edited_backstory"])
+        # content_creator_task = tasks.content_creation(agent=content_creator, description=task_info["edited_description"], expected_output=task_info["edited_expected_output"], context=context)
+        
+        content_creator = agents.content_creator()
+        content_creator_task = tasks.content_creation(content_creator, context)
         
         content_creation_crew = Crew(
         agents = [content_creator],
@@ -206,51 +214,44 @@ async def contentWriter(context: ContentModel = Form(...)):
         
 
 # @app.post('/agents-info')
-@app.get('/agents-info')
-def sendAgentInfo():
+@app.post('/agents-info')
+# def sendAgentInfo():
+def sendAgentInfo(context: InfoModel = Form(...)):
     try:
         logger.info("Fetching all agent and task data from Supabase.")
-        # Initialize Supabase client
-        supabase: Client = create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_KEY'])
-
-        # Fetch data from Supabase
-        agent_table_response, task_table_response = (
-            supabase.table(table)
-            .select("*")
-            .execute()
-            .data for table in ["agents", "tasks"]
-        )
+        print(context)
         
-        logger.debug(f"Fetched agent data: {agent_table_response}")
-        logger.debug(f"Fetched task data: {task_table_response}")
-
-        agent_objects = {
-            agent_response["agent_name"]: {
-                "role": agent_response["agent_name"],
-                "goal": agent_response["edited_goal"], 
-                "backstory": agent_response["edited_backstory"]
-            }
-            for agent_response in agent_table_response
-        }
-
+        marketing_data = {field: getattr(context, field) for field in MarketingModel.model_fields}
+        content_data = {field: getattr(context, field) for field in ContentModel.model_fields}
         
-        # Create tasks
-        task_objects = {
-            task_response["task_name"]: {
-                "agent": task_response["agent_name"],
-                "task_name": task_response["task_name"],
-                "description": task_response["edited_description"],
-                "expected_output": task_response["edited_expected_output"]
-            }
-            for task_response in task_table_response
-        }
+        marketing_context = MarketingModel(**marketing_data)
+        content_context = ContentModel(**content_data)
+        
+        agents = MarketingAgents(model="ChatGPT")
+        tasks = MarketingTasks()
+
+        # AGENTS
+        marketing_analyst = agents.marketing_analyst()
+        content_creator = agents.content_creator()
+        SEO_specialist = agents.SEO_specialist()
+        
+        marketing_analyst_task = tasks.marketing_analysis(marketing_analyst, context=marketing_context)
+        content_creator_task = tasks.content_creation(content_creator, context=content_context)
+        SEO_specialist_task = tasks.SEO(SEO_specialist, context=marketing_context)
         
         logger.info("Returning structured agent and task objects.")
         
         return {
-            "agents": {name: AgentModel(role=name, goal=agent["goal"], backstory=agent["backstory"]) for name, agent in agent_objects.items()},
-            "tasks": {name + " Task": TaskModel(task_name=name, description=task["description"], agentName=task["agent"]) for name, task in task_objects.items()}
-        }
+             "agents": {
+                "marketing_analyst": AgentModel(role=marketing_analyst.role, goal=marketing_analyst.goal, backstory=marketing_analyst.backstory),
+                "content_creator": AgentModel(role=content_creator.role, goal=content_creator.goal, backstory=content_creator.backstory),
+                "SEO_specialist": AgentModel(role=SEO_specialist.role, goal=SEO_specialist.goal, backstory=SEO_specialist.backstory),
+                },
+            "tasks":{
+                "marketing_analyst_task": TaskModel(task_name='Marketing Analysis', description=marketing_analyst_task.description, agentName=marketing_analyst_task.agent.role),
+                "content_creator_task": TaskModel(task_name='Content Creation',description=content_creator_task.description, agentName=content_creator_task.agent.role),
+                "SEO_specialist_task": TaskModel(task_name='SEO Analysis',description=SEO_specialist_task.description, agentName=SEO_specialist_task.agent.role),
+                }}
     except Exception as e:
         print(e)
         logger.exception("Error while sending agent and task info:")
