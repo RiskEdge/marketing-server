@@ -29,8 +29,8 @@ def get_llm(model: str):
         print("Error while initializing LLM:", e)
 
 class MarketingAgents:
-    def __init__(self, model: str, temp: float = 0):
-        self.llm = get_llm(model, temp)
+    def __init__(self, model: str):
+        self.llm = get_llm(model)
         
     def marketing_manager(self):
         return Agent(
