@@ -7,6 +7,7 @@ from fastapi import FastAPI,  Form
 from fastapi.middleware.cors import CORSMiddleware
 
 from crewai import Crew
+from langchain_openai import ChatOpenAI
 
 from mycrew.agents import MarketingAgents
 from mycrew.tasks import MarketingTasks
@@ -106,6 +107,7 @@ async def index() -> dict:
 async def marketingAnalyst(context: MarketingModel = Form(...)):
     try:
         logger.info("Received request at /marketing-analyst endpoint.")
+        # llm = ChatOpenAI(model='o4-mini', api_key=os.environ["OPENAI_API_KEY"])
         agents = MarketingAgents(model=context.llm)
         
         # agent_info = await getAgentFromDB("Marketing Analyst")
@@ -180,7 +182,7 @@ async def contentWriter(context: ContentModel = Form(...)):
     try:
         # print(context)
         logger.info("Received request at /content-writer endpoint.")
-        agents = MarketingAgents(model=context.llm, temp=context.creativity)
+        agents = MarketingAgents(model=context.llm)
         
         
         # agent_info = await getAgentFromDB("Content Writer")

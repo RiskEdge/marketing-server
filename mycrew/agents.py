@@ -11,17 +11,17 @@ from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 
-def get_llm(model: str, temp: float = 0):
+def get_llm(model: str):
     """
     Returns an initialized LLM object based on the provider and model.
     """
     try:
         if model.lower() == "chatgpt":
-            return ChatOpenAI(model='o3-mini', temperature=temp, api_key=os.environ["OPENAI_API_KEY"])
+            return ChatOpenAI(model='gpt-4o', api_key=os.environ["OPENAI_API_KEY"])
         
         elif model.lower() == "gemini":
             # return ChatGoogleGenerativeAI(model='gemini-1.5-flash', temperature=temp, api_key=os.environ["GOOGLE_API_KEY"])
-            return LLM(model="gemini/gemini-2.0-flash", temperature=temp)
+            return LLM(model="gemini/gemini-2.5-flash")
         
         else:
             raise ValueError(f"Unsupported LLM provider: {model}")
